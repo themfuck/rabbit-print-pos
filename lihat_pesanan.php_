@@ -1,0 +1,1396 @@
+<?php 
+
+    include_once("head.php"); 
+    include_once("konfigurasi.php"); 
+    include_once("Data/data_pelanggan.php"); 
+
+    $user_id = $_SESSION['user_id'];
+    $user_nama = $_SESSION['user_nama'];
+    $nomor_pesanan = "";
+    $no_surat_jalan = "";
+    $jenis_pesanan = "";
+    $tgl_pesanan = ""; 
+    $id_pelanggan = ""; 
+    $nama_pelanggan = "";
+    $total_qty = 0;
+    $total_pck = 0;
+
+    if ( isset($_GET['nomor_pesanan']) && 
+            ($_GET['nomor_pesanan'] != null || $_GET['nomor_pesanan'] != "") ) {
+        $nomor_pesanan = $_GET['nomor_pesanan'];
+    } else {
+        echo "<script>window.location = 'daftar_pesanan.php';</script>";
+    }
+
+    tulisLog('lihat_pesanan.php -> load');
+
+    $sel_psn = "SELECT * FROM pesanan WHERE pesanan_no_pesanan = '".$nomor_pesanan."'";
+    tulisLog("lihat_pesanan.php -> sel_psn : ".$sel_psn);
+    $query_psn = $con->query($sel_psn);
+    while ($row = $query_psn->fetch_assoc()) {
+        $no_surat_jalan = $row['pesanan_no_surat_jalan_masuk'];
+        $jenis_pesanan = $row['pesanan_jenis_pesanan'];
+        $tgl_pesanan = date('d-m-Y', strtotime($row['pesanan_tanggal_pesanan']));
+        $id_pelanggan = $row['pesanan_pelanggan_id'];
+    }
+
+    // SELECT NAMA PEMESAN
+    $sel_plg = "SELECT pelanggan_nama FROM pelanggan WHERE pelanggan_id = ".$id_pelanggan;
+    tulisLog("lihat_pesanan.php -> sel_plg : ".$sel_plg);
+    $query_plg = $con->query($sel_plg);
+    while ($row = $query_plg->fetch_assoc()) {
+        $nama_pelanggan = $row['pelanggan_nama'];
+    }
+
+    // SELECT DETAIL PESANAN
+    $list_ubah_detail_pesanan = array();
+    $list_ubah_detail_pesananTmp = array();
+    $list_detail_pesanan = array();
+    $list_detail_pesananTmp = array();
+    $sel_detailpsn = "SELECT * FROM detail_pesanan WHERE detail_pesanan_no_pesanan = '".$nomor_pesanan."'";
+    tulisLog("lihat_pesanan.php -> sel_detailpsn : ".$sel_detailpsn);
+
+    $query_detail = $con->query($sel_detailpsn);
+    $detail_pesanan_qty = 0;
+    $detail_pesanan_qty_packing = 0;
+    $count = 0;
+    $detail_pesanan_ids = "";
+
+    // KG/Y/M dan PS hitungan harus beda
+    if ($query_detail->num_rows > 0) {
+        while ($row = $query_detail->fetch_assoc()) {
+            $surat_jalan_detail_keterangan = "";
+            $detail_kain = "";
+            $detail_keterangan = "";
+
+            // list ubah pesanan
+            $list_ubah_detail_pesananTmp = array(
+                'detail_pesanan_id'            => $row['detail_pesanan_id'],
+                'detail_pesanan_no_pesanan'    => $row['detail_pesanan_no_pesanan'],
+                'detail_pesanan_key'           => $row['detail_pesanan_key'],
+                'detail_pesanan_nama_barang'   => $row['detail_pesanan_nama_barang'],
+                'detail_pesanan_jenis_print'   => $row['detail_pesanan_jenis_print'],
+                'detail_pesanan_nama_warna'    => $row['detail_pesanan_nama_warna'],
+                'detail_pesanan_detail_kain'   => $row['detail_pesanan_detail_kain'],
+                'detail_pesanan_ukuran'        => $row['detail_pesanan_ukuran'],
+                'detail_pesanan_sisi_kanan'    => $row['detail_pesanan_sisi_kanan'],
+                'detail_pesanan_sisi_kiri'     => $row['detail_pesanan_sisi_kiri'],
+                'detail_pesanan_sisi_blkng'    => $row['detail_pesanan_sisi_blkng'],
+                'detail_pesanan_qty'           => $row['detail_pesanan_qty'],
+                'detail_pesanan_satuan'        => $row['detail_pesanan_satuan'],
+                'detail_pesanan_qty_packing'   => $row['detail_pesanan_qty_packing'],
+                'detail_pesanan_jenis_packing' => $row['detail_pesanan_jenis_packing'],
+                'detail_pesanan_status'        => $row['detail_pesanan_status'],
+                'detail_pesanan_keterangan'    => $row['detail_pesanan_keterangan']
+            );
+            array_push($list_ubah_detail_pesanan, $list_ubah_detail_pesananTmp);
+            
+            if (empty($list_detail_pesanan)) {
+
+                if ($row['detail_pesanan_satuan'] != 'PS') {
+                    $detail_pesanan_qty = (double) $row['detail_pesanan_qty'] * (int) $row['detail_pesanan_qty_packing'];
+                    $detail_pesanan_qty_packing = (int) $row['detail_pesanan_qty_packing'];
+                    if ($row['detail_pesanan_detail_kain'] != "") {
+                        $detail_kain = $row['detail_pesanan_detail_kain']." - ";
+                    }
+                    $surat_jalan_detail_keterangan .= $detail_kain . $row['detail_pesanan_qty']. " x ".$row['detail_pesanan_qty_packing']."\r\n";
+                } else {
+                    $detail_pesanan_qty = (double) $row['detail_pesanan_qty'];
+                    $detail_pesanan_qty_packing = (int) $row['detail_pesanan_qty_packing'];
+                    if ($row['detail_pesanan_detail_kain'] != "") {
+                        $detail_kain = $row['detail_pesanan_detail_kain']." - ";
+                    }
+                    if ($row['detail_pesanan_keterangan'] != "") {
+                        $detail_keterangan = " (".$row['detail_pesanan_keterangan'].")";
+                    }
+                    $surat_jalan_detail_keterangan = $detail_kain . $row['detail_pesanan_ukuran']." : ".$row['detail_pesanan_sisi_kanan']. ", ".$row['detail_pesanan_sisi_kiri'].", ".$row['detail_pesanan_sisi_blkng']. $detail_keterangan ."\r\n";
+                }
+                $detail_pesanan_ids = $row['detail_pesanan_id'].",";
+                $list_detail_pesananTmp = array(
+                    'detail_pesanan_ids'           => $detail_pesanan_ids,
+                    'detail_pesanan_no_pesanan'    => $row['detail_pesanan_no_pesanan'],
+                    'detail_pesanan_nama_barang'   => $row['detail_pesanan_nama_barang'],
+                    'detail_pesanan_jenis_print'   => $row['detail_pesanan_jenis_print'],
+                    'detail_pesanan_warna'         => $row['detail_pesanan_warna'],
+                    'detail_pesanan_qty'           => $detail_pesanan_qty,
+                    'detail_pesanan_satuan'        => $row['detail_pesanan_satuan'],
+                    'detail_pesanan_qty_packing'   => $detail_pesanan_qty_packing,
+                    'detail_pesanan_jenis_packing' => $row['detail_pesanan_jenis_packing'],
+                    'detail_pesanan_status'        => $row['detail_pesanan_status'],
+                    'detail_pesanan_keterangan'    => $surat_jalan_detail_keterangan
+                );
+                array_push($list_detail_pesanan, $list_detail_pesananTmp);
+
+            } else {
+                if ( $list_detail_pesanan[$count]['detail_pesanan_nama_barang'] == $row['detail_pesanan_nama_barang'] ) {
+
+                    $detail_pesanan_ids = $list_detail_pesanan[$count]['detail_pesanan_ids'].=$row['detail_pesanan_id'].",";
+
+                    if ($row['detail_pesanan_satuan'] != 'PS') {
+                        // $surat_jalan_detail_keterangan .= $list_detail_pesanan[$count]['detail_pesanan_keterangan'] . $row['detail_pesanan_qty']. " x ".$row['detail_pesanan_qty_packing'].", ";
+                        if ($row['detail_pesanan_detail_kain'] != "") {
+                            $detail_kain = $row['detail_pesanan_detail_kain']." - ";
+                        }
+                        $surat_jalan_detail_keterangan .= $list_detail_pesanan[$count]['detail_pesanan_keterangan'] . $detail_kain . $row['detail_pesanan_qty']. " x ".$row['detail_pesanan_qty_packing']."\r\n";
+                        $detail_pesanan_qty = $list_detail_pesanan[$count]['detail_pesanan_qty'];
+                        $detail_pesanan_qty = $detail_pesanan_qty + ( (double) $row['detail_pesanan_qty'] * (int) $row['detail_pesanan_qty_packing']);
+                        $detail_pesanan_qty_packing = $list_detail_pesanan[$count]['detail_pesanan_qty_packing'];
+                        $detail_pesanan_qty_packing = $detail_pesanan_qty_packing + (int) $row['detail_pesanan_qty_packing'];
+                    } else {
+                        if ($row['detail_pesanan_detail_kain'] != "") {
+                            $detail_kain = $row['detail_pesanan_detail_kain']." - ";
+                        }
+                        if ($row['detail_pesanan_keterangan'] != "") {
+                            $detail_keterangan = " (".$row['detail_pesanan_keterangan'].")";
+                        }
+                        $surat_jalan_detail_keterangan = $list_detail_pesanan[$count]['detail_pesanan_keterangan'] . $detail_kain .$row['detail_pesanan_ukuran'] ." : ". $row['detail_pesanan_sisi_kanan']. ", ".$row['detail_pesanan_sisi_kiri'].", ".$row['detail_pesanan_sisi_blkng'] . $detail_keterangan . " \r\n";
+                        $detail_pesanan_qty = $list_detail_pesanan[$count]['detail_pesanan_qty'];
+                        $detail_pesanan_qty += ( (double) $row['detail_pesanan_qty']);
+                        $detail_pesanan_qty_packing = $list_detail_pesanan[$count]['detail_pesanan_qty_packing'];
+                        $detail_pesanan_qty_packing += (int) $row['detail_pesanan_qty_packing'];
+                    }
+
+                    $list_detail_pesanan[$count]['detail_pesanan_qty'] = $detail_pesanan_qty;
+                    $list_detail_pesanan[$count]['detail_pesanan_qty_packing'] = $detail_pesanan_qty_packing;
+                    $list_detail_pesanan[$count]['detail_pesanan_keterangan'] = $surat_jalan_detail_keterangan;
+                } else {
+                    $detail_pesanan_ids = $row['detail_pesanan_id'].",";
+
+                    if ($row['detail_pesanan_satuan'] != 'PS') {
+                        // $surat_jalan_detail_keterangan .= $row['detail_pesanan_qty']. " x ".$row['detail_pesanan_qty_packing'].", ";
+                        if ($row['detail_pesanan_detail_kain'] != "") {
+                            $detail_kain = $row['detail_pesanan_detail_kain']." - ";
+                        }
+                        $surat_jalan_detail_keterangan .= $detail_kain . $row['detail_pesanan_qty']. " x ".$row['detail_pesanan_qty_packing']."\r\n";
+                        $detail_pesanan_qty = (double) $row['detail_pesanan_qty'] * (int) $row['detail_pesanan_qty_packing'];
+                        $detail_pesanan_qty_packing = (int) $row['detail_pesanan_qty_packing'];
+                    } else {
+                        if ($row['detail_pesanan_detail_kain'] != "") {
+                            $detail_kain = $row['detail_pesanan_detail_kain']." - ";
+                        }
+                        if ($row['detail_pesanan_keterangan'] != "") {
+                            $detail_keterangan = " (".$row['detail_pesanan_keterangan'].")";
+                        }
+                        $surat_jalan_detail_keterangan = $detail_kain.$row['detail_pesanan_ukuran']." : ".$row['detail_pesanan_sisi_kanan']. ", ".$row['detail_pesanan_sisi_kiri'].", ".$row['detail_pesanan_sisi_blkng'].$detail_keterangan."\r\n";
+                        $detail_pesanan_qty = (double) $row['detail_pesanan_qty'] * (int) $row['detail_pesanan_qty_packing'];
+                        $detail_pesanan_qty_packing = (int) $row['detail_pesanan_qty_packing'];
+                    }
+
+                    $list_detail_pesananTmp = array(
+                        'detail_pesanan_ids'           => $detail_pesanan_ids,
+                        'detail_pesanan_no_pesanan'    => $row['detail_pesanan_no_pesanan'],
+                        'detail_pesanan_nama_barang'   => $row['detail_pesanan_nama_barang'],
+                        'detail_pesanan_jenis_print'   => $row['detail_pesanan_jenis_print'],
+                        'detail_pesanan_warna'         => $row['detail_pesanan_warna'],
+                        'detail_pesanan_qty'           => $detail_pesanan_qty,
+                        'detail_pesanan_satuan'        => $row['detail_pesanan_satuan'],
+                        'detail_pesanan_qty_packing'   => $detail_pesanan_qty_packing,
+                        'detail_pesanan_jenis_packing' => $row['detail_pesanan_jenis_packing'],
+                        'detail_pesanan_status'        => $row['detail_pesanan_status'],
+                        'detail_pesanan_keterangan'    => $surat_jalan_detail_keterangan
+                    );
+
+                    array_push($list_detail_pesanan, $list_detail_pesananTmp);
+                    $count++;
+                }
+            }
+        }
+    }
+
+?>
+
+<body class="hold-transition skin-blue-light sidebar-collapse sidebar-mini">
+<div class="wrapper">
+    <header class="main-header">
+        <?php include_once("logo-header.php"); ?>
+    </header>
+    <aside class="main-sidebar">
+        <?php include_once("menu.php"); ?>
+    </aside>
+    <div class="content-wrapper">
+        <section class="content-header">
+            <h1>Lihat Pesanan</h1>
+        </section>
+        <section class="content">
+        <div class="row">
+            <div class="col-md-12">
+                <div class="box box-primary">
+                    <div class="box-body">
+                        <div class="col-md-4">
+                            <input type="hidden" id="no_pesanan" name="no_pesanan" class="form-control" value="<?php echo $nomor_pesanan;?>">
+                            <div class="form-group">
+                                <label for="no_surat_jalan">No Surat Jalan</label>
+                                <input type="text" id="no_surat_jalan" name="no_surat_jalan" class="form-control" placeholder="No. Surat Jalan" value="<?php echo $no_surat_jalan;?>">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="nama_pelanggan">Pelanggan</label>
+                                <div class="input-group">
+                                    <input type="text" id="nama_pelanggan" name="nama_pelanggan" class="form-control" placeholder="Nama Pelanggan" value="<?php echo $nama_pelanggan; ?>">
+                                    <div class="input-group-addon" style="background-color: #ffffff">
+                                        <span class="btn-custom">Pilih</span>
+                                    </div>
+                                </div>
+                                <input type="text" style="display: none" id="no_pelanggan" value="<?php echo $id_pelanggan; ?>">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="tgl_pesanan">Tanggal Masuk Pesanan</label>
+                                <div class="input-group date">
+                                    <input type="text" class="form-control pull-right" id="tgl_pesanan" name="tgl_pesanan" placeholder="Tanggal Pesanan" value="<?php echo $tgl_pesanan;?>">
+                                    <div class="input-group-addon">
+                                        <i class="fa fa-calendar"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="inputBarang" class="col-md-12" style="padding: 0">
+                            <div class="form-group col-md-3">
+                                <label for="nama_barang">Nama Barang</label>
+                                <input type="text" id="nama_barang" name="nama_barang" class="form-control" placeholder="Nama Barang" style="text-transform: capitalize;">
+                            </div>
+                            <div class="form-group col-md-3">
+                                <label for="jenis_print">Motif</label>
+                                <input type="text" id="jenis_print" name="jenis_print" class="form-control" placeholder="Jenis Print" style="text-transform: capitalize;">
+                            </div>
+                            <div class="form-group col-md-2">
+                                <label for="warna">Jumlah Warna</label>
+                                <input type="text" id="warna" name="warna" class="form-control" placeholder="Jumlah Warna" onkeypress="return numbersOnly(event, this.value)">
+                            </div>
+                            <div class="form-group col-md-2">
+                                <label for="satuan">Satuan</label>
+                                <select class="form-control" id="satuan" name="satuan">
+                                    <option value="Kg">Kilogram (kg)</option>
+                                    <option value="PS">Pasang</option>
+                                    <option value="y">Yard (y)</option>
+                                    <option value="m">Meter (m)</option>
+                                    <option value="PT">Potong</option>
+                                </select>
+                            </div>
+                            <div class="form-group col-md-2">
+                                <label for="packing">Packing</label>
+                                <select class="form-control" id="packing" name="packing">
+                                    <option value="Roll">Roll</option>
+                                    <option value="PT">Potong</option>
+                                    <option value="PS">Pasang</option>
+                                </select>
+                            </div>
+                            <input type="hidden" id="jenis_pesanan" value="<?php echo($jenis_pesanan)?>">
+                        </div>
+                        <!-- // tombol update -->
+                        <div class="col-md-12">
+                            <button type="button" id="btnUbahPesanan" class="btn btn-primary" disabled="true">Ubah Pesanan</button>
+                            <button type="button" id="btnUbahPacking" class="btn btn-primary" disabled="true">Ubah Packing</button>
+                            <button type="button" id="btnSimpanUbah" class="btn btn-primary" disabled="true">Simpan Perubahan</button>
+                        </div><br/>
+                        <div class="col-md-12">
+                            <table id="tabel_barang" class="table table-bordered table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>No</th>
+                                        <th>Nama Barang</th>
+                                        <th>Motif</th>
+                                        <th>Jml. Warna</th>
+                                        <th>Qty</th>
+                                        <th>Satuan</th>
+                                        <th>Qty Packing</th>
+                                        <th>Packing</th>
+                                        <th>Surat Jalan</th>
+                                        <th>Keterangan</th>
+                                        <th>IDs</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php 
+                                    $num = 0;
+                                    foreach ($list_detail_pesanan as $detail) {
+                                        if ($detail['detail_pesanan_status'] == 'B') {
+                                            $detail['detail_pesanan_status'] = "Surat jalan belum dibuat";
+                                        } 
+                                        $num++;
+                                        echo ""
+                                        . "<tr>"
+                                            . "<td>" . $num . "</td>"
+                                            . "<td>" . $detail['detail_pesanan_nama_barang'] . "</td>"
+                                            . "<td>" . $detail['detail_pesanan_jenis_print'] . "</td>"
+                                            . "<td>" . $detail['detail_pesanan_warna'] . "</td>"
+                                            . "<td>" . $detail['detail_pesanan_qty'] . "</td>"
+                                            . "<td>" . $detail['detail_pesanan_satuan'] . "</td>"
+                                            . "<td>" . $detail['detail_pesanan_qty_packing'] . "</td>"
+                                            . "<td>" . $detail['detail_pesanan_jenis_packing'] . "</td>"
+                                            . "<td>" . $detail['detail_pesanan_status'] . "</td>"
+                                            . "<td>" . rtrim($detail['detail_pesanan_keterangan'], ", ") . "</td>"
+                                            . "<td>" . $detail['detail_pesanan_ids'] . "</td>"
+                                        . "</tr>";
+                                    }
+                                    ?>
+                                </tbody>
+                            </table><br>
+                            <div class="col-md-12" style="padding: 0">
+                                <button type="button" id="btnKembali" class="btn btn-custom" onclick="window.location='daftar_pesanan.php'">Kembali</button>
+                                <!-- <button type="button" id="btnSuratJalan" class="btn btn-danger">Buat Surat Jalan</button> -->
+                            </div><br/>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        </section>
+    </div>
+</div>
+
+<div class="modal fade" id="modal_packing_U">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+               <button type="button" class="close" aria-label="Close">
+               <span aria-hidden="true">&times;</span></button>
+               <h4 class="modal-title">Tambah Packing</h4>
+            </div>
+            <div class="box-body" style="padding: 15px">
+                <div class="row col-md-12">
+                    <div class="col-md-12" style="padding: 0; display: inline-flex;">
+                        <label style="width: 30px"></label>
+                        <label class="form-group col-md-4">Kode Kain</label>
+                        <label class="form-group col-md-4">Warna</label>
+                        <label class="form-group col-md-4">Qty</label>
+                        <label class="form-group col-md-4">Qty Packing</label>
+                        <label class="form-group col-md-6">BS/BP/BK</label>
+                    </div>
+                    <div id="field_list_U">
+                    </div>
+                    <div class="form-group col-md-12">
+                        <button id="b1" class="btn btn-custom" type="button">Tambah Input</button>
+                        <button id="r1" class="btn btn-danger" type="button" disabled="true">Hapus Input</button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-custom" data-dismiss="modal" aria-label="Close" onclick="$('#field_list_U').empty()">Batal</button>
+                <button id="btnSimpanPkg" type="button" class="btn btn-success">Simpan Packing</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modal_packing_ABC">
+    <div class="modal-dialog modal-lg" style="width: 90%">
+        <div class="modal-content">
+            <div class="modal-header">
+               <button type="button" class="close" aria-label="Close">
+               <span aria-hidden="true">&times;</span></button>
+               <h4 class="modal-title">Tambah Packing</h4>
+            </div>
+            <div class="box-body" style="padding: 15px">
+                <div class="row col-md-12">
+                    <div class="col-md-12" style="padding: 0; display: inline-flex;">
+                        <label class="col-md-1"></label>
+                        <label class="form-group col-md-6">Kode Kain</label>
+                        <label class="form-group col-md-6">Warna</label>
+                        <label class="form-group col-md-10">Ukuran</label>
+                        <label id="lbUkuran_kanan" class="form-group col-md-3">Kanan</label>
+                        <label id="lbUkuran_kiri" class="form-group col-md-3">Kiri</label>
+                        <label id="lbUkuran_blkg" class="form-group col-md-3">Belakang</label>
+                        <label class="form-group col-md-6">BS/BP/BK</label>
+                    </div>
+                    <div id="field_list_ABC">
+                    </div>
+                    <div class="form-group col-md-12">
+                        <button id="b2" class="btn btn-custom" type="button">Tambah Input</button>
+                        <button id="r2" class="btn btn-danger" type="button" disabled="true">Hapus Input</button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-custom" id="btnBatalPotong" data-dismiss="modal" aria-label="Close" onclick="$('#field_list_ABC').empty()">Batal</button>
+                <button id="btnSimpanPkg_ABC" type="button" class="btn btn-success">Simpan Packing</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modal_packing_D">
+    <div class="modal-dialog modal-lg" style="width: 90%">
+        <div class="modal-content">
+            <div class="modal-header">
+               <button type="button" class="close" aria-label="Close">
+               <span aria-hidden="true">&times;</span></button>
+               <h4 class="modal-title">Tambah Packing</h4>
+            </div>
+            <div class="box-body" style="padding: 15px">
+                <div class="row col-md-12">
+                    <div class="col-md-12" style="padding: 0; display: inline-flex;">
+                        <label class="col-md-1"></label>
+                        <label class="form-group col-md-6">Kode Kain</label>
+                        <label class="form-group col-md-6">Warna</label>
+                        <label class="form-group col-md-10">Ukuran</label>
+                        <label class="form-group col-md-4">Qty</label>
+                        <label class="form-group col-md-4">Qty Packing</label>
+                        <label class="form-group col-md-6">BS/BP/BK</label>
+                    </div>
+                    <div id="field_list_D">
+                    </div>
+                    <div class="form-group col-md-12">
+                        <button id="b3" class="btn btn-custom" type="button">Tambah Input</button>
+                        <button id="r3" class="btn btn-danger" type="button" disabled="true">Hapus Input</button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-custom" data-dismiss="modal" aria-label="Close" onclick="$('#field_list_D').empty()">Batal</button>
+                <button id="btnSimpanPkg_D" type="button" class="btn btn-success">Simpan Packing</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<?php include_once("footer.php"); ?>
+<script>
+    function getSize(num) {
+        var id = "sizes_kain" + num;
+        var cls = "#checkeds_" + id + " input:checked";
+
+        document.getElementById(id).value = $(cls).map(function(i,el){return el.name;}).get().join(",");
+        // $("#kanan_"+num).val(0);
+    }
+    function getSize2(num) {
+        var id = "size_kain" + num;
+        var cls = "#checked_" + id + " input:checked";
+
+        document.getElementById(id).value = $(cls).map(function(i,el){return el.name;}).get().join(",");
+        // $("#kanan_"+num).val(0);
+    }
+
+    $(function () {
+        var jenis_pesanan  = document.getElementById('jenis_pesanan').value;
+        setSidebarToActive();
+        var list_barang = {};
+        var save_barang = {};
+        var no_tabel = 1;
+        var counter = 0;
+        var list_package = {};
+        var list_pesanan = {};
+        var satuan = "";
+        var option = "";
+        for (var i=1; i <= 16; i++) {
+            option += "<option value='"+ i +"'>"+ i +"</option>";
+        }
+
+        $('#tgl_pesanan').datepicker({
+            'setDate'     : new Date(),
+            'format'      : "dd-mm-yyyy"
+        });
+
+        var tabel = $('#tabel_barang').DataTable({
+            'paging'      : false,
+            'lengthChange': false,
+            'searching'   : false,
+            'ordering'    : true,
+            'info'        : false,
+            'autoWidth'   : true,
+            'select'      : {
+                'style': 'single'
+            },
+            'language' : {
+                'search'           : '<i class="fa fa-search"></i>',
+                'searchPlaceholder': 'Pencarian',
+                'paginate' : {
+                    'previous' : '<i class="fa fa-angle-left"></i>',
+                    'next'     : '<i class="fa fa-angle-right"></i>'
+                }
+            },
+            "columnDefs": [
+            {
+                "defaultContent": "-",
+                "targets" : "_all"
+            },
+            // { "visible" : false, "targets": 8 },
+            { "visible" : false, "targets": 10 },
+            { 
+                "render" : function ( data, type, row ) {
+                    return data.substr( 0, 20 );
+                } , "targets": 9 
+            }
+            ]
+        });
+
+        $('#tabel_barang tbody').on('click', 'tr', function () {
+            // $(this).toggleClass('selected');
+            if ( $(this).hasClass('selected') ) {
+                $(this).removeClass('selected');
+            }
+            else {
+                tabel.$('tr.selected').removeClass('selected');
+                $(this).addClass('selected');
+            }
+            document.getElementById('btnUbahPesanan').disabled = false;
+            document.getElementById('btnSimpanUbah').disabled = false;
+        });
+
+        $('#btnSuratJalan').click( function () {
+            var no_pesanan = document.getElementById('no_pesanan').value;
+            window.location = "surat_jalan.php?pesanan_no_pesanan="+no_pesanan;
+        });
+
+        $('#btnUbahPesanan').click(function() {
+            document.getElementById('btnUbahPacking').disabled = false;
+            var selected_row = tabel.rows('.selected').data();
+            delete selected_row.context;
+            delete selected_row.selector;
+            delete selected_row.ajax;
+            if (selected_row.length > 1) {
+                alert('Tidak dapat ubah lebih dari 1 pesanan. Silahkan pilih salah satu.');
+                return false;
+            }
+            document.getElementById('nama_barang').value = selected_row[0][1];
+            document.getElementById('jenis_print').value = selected_row[0][2];
+            document.getElementById('warna').value = selected_row[0][3];
+            $('#satuan').find('option[text="'+selected_row[0][5]+'"]').val();
+            $('#packing').find('option[text="'+selected_row[0][7]+'"]').val();
+            // satuan = selected_row[0][5];
+
+            var list_ubah = <?php echo json_encode($list_ubah_detail_pesanan); ?>;
+            var list_packageTmp = {};
+            if ( jenis_pesanan == "U" || jenis_pesanan == "E" ) {
+                for (var x = 0; x < list_ubah.length; x++) {
+                    if ( selected_row[0][10].includes(list_ubah[x].detail_pesanan_id) ) {
+
+                        list_packageTmp[x] = {
+                            'detail_pesanan_id'          : list_ubah[x].detail_pesanan_id,
+                            'detail_pesanan_detail_kain' : list_ubah[x].detail_pesanan_detail_kain,
+                            'detail_pesanan_nama_warna'  : list_ubah[x].detail_pesanan_nama_warna,
+                            'detail_pesanan_ukuran'      : list_ubah[x].detail_pesanan_ukuran,
+                            'detail_pesanan_qty'         : list_ubah[x].detail_pesanan_qty,
+                            'detail_pesanan_qty_packing' : list_ubah[x].detail_pesanan_qty_packing,
+                            'detail_pesanan_keterangan'  : list_ubah[x].detail_pesanan_keterangan,
+                            'detail_pesanan_ukuran'      : list_ubah[x].detail_pesanan_ukuran,
+                            'detail_pesanan_key'         : list_ubah[x].detail_pesanan_key
+                        };
+                    }
+                }
+            } else if ( jenis_pesanan == "A" || jenis_pesanan == "B" || jenis_pesanan == "C" || jenis_pesanan == "D") {
+                for (var x = 0; x < list_ubah.length; x++) {
+                    if ( selected_row[0][10].includes(list_ubah[x].detail_pesanan_id) ) {
+
+                        list_packageTmp[x] = {
+                            'detail_pesanan_id'          : list_ubah[x].detail_pesanan_id,
+                            'detail_pesanan_key'         : list_ubah[x].detail_pesanan_key,
+                            'detail_pesanan_detail_kain' : list_ubah[x].detail_pesanan_detail_kain,
+                            'detail_pesanan_ukuran'      : list_ubah[x].detail_pesanan_ukuran,
+                            'detail_pesanan_sisi_kanan'  : list_ubah[x].detail_pesanan_sisi_kanan,
+                            'detail_pesanan_sisi_kiri'   : list_ubah[x].detail_pesanan_sisi_kiri,
+                            'detail_pesanan_sisi_blkng'  : list_ubah[x].detail_pesanan_sisi_blkng,
+                            'detail_pesanan_qty'         : list_ubah[x].detail_pesanan_qty,
+                            'detail_pesanan_qty_packing' : list_ubah[x].detail_pesanan_qty_packing,
+                            'detail_pesanan_keterangan'  : list_ubah[x].detail_pesanan_keterangan,
+                            'detail_pesanan_status'      : list_ubah[x].detail_pesanan_status
+                        };
+                    }
+                }
+            }
+            list_package = list_packageTmp;
+            // console.log("B4 edit list_package : " + JSON.stringify(list_package));
+
+        });
+
+        $('#btnUbahPacking').click(function() {
+
+            var selected_row = tabel.rows('.selected').data();
+            delete selected_row.context;
+            delete selected_row.selector;
+            delete selected_row.ajax;
+            satuan = selected_row[0][5];
+
+            var list_ubah = <?php echo json_encode($list_ubah_detail_pesanan); ?>;
+            console.log("list ubah : "+JSON.stringify(list_ubah));
+
+            if ( jenis_pesanan == "U" ) {
+
+                for (var x = 0; x < list_ubah.length; x++) {
+
+                    if ( selected_row[0][10].includes(list_ubah[x].detail_pesanan_id) ) {
+
+                        var addto = "#field_list_U";
+                        var next = x+1;
+                        var add = "#field" + next;
+                        var newIn = '<div id="field'+next+'" class="pck_list col-md-12" style="padding: 0; display: inline-flex;">'
+                                    + '<label style="width: 30px">'+next+'</label>'
+                                    + '<div class="form-group col-md-4">'
+                                        + '<input type="text" id="kode_kain'+next+'" value="'+list_ubah[x].detail_pesanan_detail_kain+'" class="form-control">'
+                                    + '</div>'
+                                    + '<div class="form-group col-md-4">'
+                                        + '<input type="text" id="warna_kain'+next+'" value="'+list_ubah[x].detail_pesanan_nama_warna+'" class="form-control">'
+                                    + '</div>'
+                                    + '<div class="form-group col-md-4">'
+                                        + '<input type="text" id="qty_kain'+next+'" value="'+list_ubah[x].detail_pesanan_qty+'" class="form-control">'
+                                    + '</div>'
+                                    + '<div class="form-group col-md-4">'
+                                        + '<input type="text" id="qty_pack'+next+'" value="'+list_ubah[x].detail_pesanan_qty_packing+'" class="form-control">'
+                                    + '</div>'
+                                    + '<div class="form-group col-md-6">'
+                                        + '<input type="text" id="ket_kain'+next+'" value="'+list_ubah[x].detail_pesanan_keterangan+'" class="form-control">'
+                                    + '</div>'
+                                    + '<div class="form-group">'
+                                        + '<input type="hidden" id="key_kain'+next+'" value="'+list_ubah[x].detail_pesanan_key+'" class="form-control">'
+                                    + '</div>'
+                                + '</div>';
+
+                        $(addto).append(newIn);
+                    }
+                }
+
+                $('#modal_packing_U').modal({
+                    show: true,
+                    keyboard: false,
+                    backdrop: 'static'
+                });
+                   
+            } else if ( jenis_pesanan == "A" || jenis_pesanan == "B" || jenis_pesanan == "C" ) {
+                var list_ubah_PS = {};
+                var selected_size = "";
+                var selected_keys = "";
+                var detail_pesanan_ids = "";
+                var count_ps = 0;
+
+                for (var x = 0; x < list_ubah.length; x++) {
+                    if ( selected_row[0][10].includes(list_ubah[x].detail_pesanan_id) ) {
+                        selected_size += list_ubah[x].detail_pesanan_ukuran + ",";
+                        selected_keys += list_ubah[x].detail_pesanan_key + ",";
+                        detail_pesanan_ids += list_ubah[x].detail_pesanan_id + ",";
+                        list_ubah_PS[count_ps] = {
+                            'detail_pesanan_ids'         : detail_pesanan_ids,
+                            'detail_pesanan_key'         : selected_keys,
+                            'detail_pesanan_detail_kain' : list_ubah[x].detail_pesanan_detail_kain,
+                            'detail_pesanan_nama_warna'  : list_ubah[x].detail_pesanan_nama_warna,
+                            'detail_pesanan_ukuran'      : selected_size,
+                            'detail_pesanan_sisi_kanan'  : list_ubah[x].detail_pesanan_sisi_kanan,
+                            'detail_pesanan_sisi_kiri'   : list_ubah[x].detail_pesanan_sisi_kiri,
+                            'detail_pesanan_sisi_blkng'  : list_ubah[x].detail_pesanan_sisi_blkng,
+                            'detail_pesanan_qty'         : list_ubah[x].detail_pesanan_qty,
+                            'detail_pesanan_qty_packing' : list_ubah[x].detail_pesanan_qty_packing,
+                            'detail_pesanan_status'      : list_ubah[x].detail_pesanan_status,
+                            'detail_pesanan_keterangan'  : list_ubah[x].detail_pesanan_keterangan
+                        };
+                    }
+                    list_ubah_PS['length'] = count_ps + 1;
+                }
+                count_ps = 0;
+                console.log("PS new : " + JSON.stringify(list_ubah_PS));
+
+                for (var x = 0; x < list_ubah_PS.length; x++) {
+
+                    if ( selected_row[0][10].includes(list_ubah_PS[x].detail_pesanan_ids) ) {
+
+                        var addto = "#field_list_ABC";
+                        var next = x+1;
+                        var option = "";
+                        for (var i=1; i <= 22; i++) {
+                            var sval = i;
+                            if (i > 16) {
+                                if (i == 17) { sval = "XS"; }
+                                if (i == 18) { sval = "S"; }
+                                if (i == 19) { sval = "M"; }
+                                if (i == 20) { sval = "L"; }
+                                if (i == 21) { sval = "XL"; }
+                                if (i == 22) { sval = "XXL"; }
+                            }
+                            if (list_ubah_PS[x].detail_pesanan_ukuran.includes(sval)) {
+                                option += '<label style="width: 60px">'
+                                            + '<div class="icheckbox_minimal-red" aria-checked="true" aria-disabled="false">'
+                                                + '<input type="checkbox" class="minimal-red" name="'+sval+'" onclick="getSize2('+next+');" checked>'
+                                                + '<ins class="iCheck-helper"></ins>'
+                                            + '</div> ' + sval
+                                        + '</label>';
+                            } else {
+                                option += '<label style="width: 60px">'
+                                            + '<div class="icheckbox_minimal-red" aria-checked="false" aria-disabled="false">'
+                                                + '<input type="checkbox" class="minimal-red" name="'+sval+'" onclick="getSize2('+next+');">'
+                                                + '<ins class="iCheck-helper"></ins>'
+                                            + '</div> ' + sval
+                                        + '</label>';
+                            }
+                        }
+
+                        var add = "#potong" + next;
+                        var newIn = '<div id="potong'+next+'" class="pck_list col-md-12" style="padding: 0; display: inline-flex;">'
+                            + '<label class="col-md-1">'+next+'</label>'
+                            + '<div class="form-group col-md-6">'
+                                + '<input type="text" id="kode_kain'+next+'" class="form-control" value="'+list_ubah_PS[x].detail_pesanan_detail_kain+'">'
+                            + '</div>'
+                            + '<div class="form-group col-md-6">'
+                                + '<input type="text" id="warna_kain'+next+'" class="form-control" value="'+list_ubah_PS[x].detail_pesanan_nama_warna+'">'
+                            + '</div>'
+                            + '<div id="checked_size_kain'+next+'" class="form-group col-md-10">'
+                                + '<input type="hidden" id="size_kain'+next+'" value="'+list_ubah_PS[x].detail_pesanan_ukuran+'" class="form-control">'
+                                + option
+                            + '</div>'
+                            + '<div class="form-group col-md-3">'
+                                + '<input type="text" id="kanan_'+next+'" onkeyup="$(\'#kiri_'+next+'\').val(this.value);" onfocus="getSize(1); this.value=null" value="'+list_ubah_PS[x].detail_pesanan_sisi_kanan+'" class="form-control">'
+                            + '</div>'
+                            + '<div class="form-group col-md-3">'
+                                + '<input type="text" id="kiri_'+next+'" value="'+list_ubah_PS[x].detail_pesanan_sisi_kiri+'" class="form-control">'
+                            + '</div>'
+                            + '<div class="form-group col-md-3">'
+                                + '<input type="text" id="blkg_'+next+'" value="'+list_ubah_PS[x].detail_pesanan_sisi_blkng+'" class="form-control">'
+                            + '</div>'
+                            + '<div class="form-group col-md-6">'
+                                + '<input type="text" style="width: 120px" id="ket_'+next+'" class="form-control" value="'+list_ubah_PS[x].detail_pesanan_keterangan+'">'
+                            + '</div>'
+                            + '<div class="form-group">'
+                                + '<input type="hidden" style="width: 120px" id="key_'+next+'" class="form-control" value="'+list_ubah_PS[x].detail_pesanan_key+'">'
+                            + '</div>'
+                        + '</div>';
+
+                        $(addto).append(newIn);
+                    }
+                }
+
+                $('#modal_packing_ABC').modal({
+                    show: true,
+                    keyboard: false,
+                    backdrop: 'static'
+                });
+                   
+            } else if ( jenis_pesanan == "D" ) {
+                var list_ubah_PS = {};
+                var selected_size = "";
+                var selected_keys = "";
+                var detail_pesanan_ids = "";
+                var count_ps = 0;
+
+                for (var x = 0; x < list_ubah.length; x++) {
+                    if ( selected_row[0][10].includes(list_ubah[x].detail_pesanan_id) ) {
+                        selected_size += list_ubah[x].detail_pesanan_ukuran + ",";
+                        selected_keys += list_ubah[x].detail_pesanan_key + ",";
+                        detail_pesanan_ids += list_ubah[x].detail_pesanan_id + ",";
+                        list_ubah_PS[count_ps] = {
+                            'detail_pesanan_ids'         : detail_pesanan_ids,
+                            'detail_pesanan_key'         : selected_keys,
+                            'detail_pesanan_detail_kain' : list_ubah[x].detail_pesanan_detail_kain,
+                            'detail_pesanan_nama_warna'  : list_ubah[x].detail_pesanan_nama_warna,
+                            'detail_pesanan_ukuran'      : selected_size,
+                            'detail_pesanan_sisi_kanan'  : list_ubah[x].detail_pesanan_sisi_kanan,
+                            'detail_pesanan_sisi_kiri'   : list_ubah[x].detail_pesanan_sisi_kiri,
+                            'detail_pesanan_sisi_blkng'  : list_ubah[x].detail_pesanan_sisi_blkng,
+                            'detail_pesanan_qty'         : list_ubah[x].detail_pesanan_qty,
+                            'detail_pesanan_qty_packing' : list_ubah[x].detail_pesanan_qty_packing,
+                            'detail_pesanan_status'      : list_ubah[x].detail_pesanan_status,
+                            'detail_pesanan_keterangan'  : list_ubah[x].detail_pesanan_keterangan
+                        };
+                    }
+                }
+                list_ubah_PS['length'] = count_ps + 1;
+                count_ps = 0;
+
+                for (var x = 0; x < list_ubah_PS.length; x++) {
+
+                    if ( selected_row[0][10].includes(list_ubah_PS[x].detail_pesanan_ids) ) {
+
+                        var addto = "#field_list_D";
+                        var next = x+1;
+                        var option = "";
+                        for (var i=1; i <= 22; i++) {
+                            var sval = i;
+                            if (i > 16) {
+                                if (i == 17) { sval = "XS"; }
+                                if (i == 18) { sval = "S"; }
+                                if (i == 19) { sval = "M"; }
+                                if (i == 20) { sval = "L"; }
+                                if (i == 21) { sval = "XL"; }
+                                if (i == 22) { sval = "XXL"; }
+                            }
+                            if (list_ubah_PS[x].detail_pesanan_ukuran.includes(sval)) {
+                                option += '<label style="width: 60px">'
+                                            + '<div class="icheckbox_minimal-red" aria-checked="true" aria-disabled="false">'
+                                                + '<input type="checkbox" class="minimal-red" name="'+sval+'" onclick="getSize('+next+');" checked>'
+                                                + '<ins class="iCheck-helper"></ins>'
+                                            + '</div> ' + sval
+                                        + '</label>';
+                            } else {
+                                option += '<label style="width: 60px">'
+                                            + '<div class="icheckbox_minimal-red" aria-checked="false" aria-disabled="false">'
+                                                + '<input type="checkbox" class="minimal-red" name="'+sval+'" onclick="getSize('+next+');">'
+                                                + '<ins class="iCheck-helper"></ins>'
+                                            + '</div> ' + sval
+                                        + '</label>';
+                            }
+                        }
+
+                        var addto = "#field_list_D";
+                        var next = x+1;
+                        var add = "#potong_" + next;
+                        var newIn = '<div id="potong_'+next+'" class="pck_list col-md-12" style="padding: 0; display: inline-flex;">'
+                            + '<label class="col-md-1">'+next+'</label>'
+                            + '<div class="form-group col-md-6">'
+                                + '<input type="text" id="kode_kain'+next+'" class="form-control" value="'+list_ubah_PS[x].detail_pesanan_detail_kain+'">'
+                            + '</div>'
+                            + '<div class="form-group col-md-6">'
+                                + '<input type="text" id="warna_kain'+next+'" class="form-control" value="'+list_ubah_PS[x].detail_pesanan_nama_warna+'">'
+                            + '</div>'
+                            + '<div id="checkeds_sizes_kain'+next+'" class="form-group col-md-10">'
+                                + '<input type="hidden" id="sizes_kain'+next+'" class="form-control" value="'+list_ubah_PS[x].detail_pesanan_ukuran+'">'
+                                + option
+                            + '</div>'
+                            + '<div class="form-group col-md-4">'
+                                + '<input type="text" id="qty_kain'+next+'" class="form-control" value="'+list_ubah_PS[x].detail_pesanan_qty+'">'
+                            + '</div>'
+                            + '<div class="form-group col-md-4">'
+                                + '<input type="text" id="qty_pack'+next+'" value="'+list_ubah_PS[x].detail_pesanan_qty_packing+'" class="form-control">'
+                            + '</div>'
+                            + '<div class="form-group col-md-6">'
+                                + '<input type="text" style="width: 120px" id="ket_'+next+'" class="form-control" value="'+list_ubah_PS[x].detail_pesanan_keterangan+'">'
+                            + '</div>'
+                            + '<div class="form-group">'
+                                + '<input type="hidden" style="width: 120px" id="keys_'+next+'" value="'+list_ubah_PS[x].detail_pesanan_key+'" class="form-control">'
+                            + '</div>'
+                        + '</div>';
+
+                        $(addto).append(newIn);
+                    }
+                }
+
+                $('#modal_packing_D').modal({
+                    show: true,
+                    keyboard: false,
+                    backdrop: 'static'
+                });
+            }
+
+        });
+
+        $('#btnSimpanPkg').click(function() {
+            // Simpan packing KG
+            var list_packageTmp = {};
+            var container = document.querySelector("#field_list_U");
+            var matches = container.querySelectorAll("div.pck_list");
+            var cnt = 1;
+            for(var i = 0; i < matches.length; i++) {
+                el = matches[i].querySelectorAll("div.form-group > input");
+                list_packageTmp[i] = {
+                    'detail_pesanan_detail_kain' : el[0].value,
+                    'detail_pesanan_nama_warna'  : el[1].value,
+                    'detail_pesanan_qty'         : el[2].value,
+                    'detail_pesanan_qty_packing' : el[3].value,
+                    'detail_pesanan_keterangan'  : el[4].value,
+                    'detail_pesanan_key'         : el[5].value
+                };
+            }
+            list_package = list_packageTmp;
+            cnt++;
+            console.log("list_package : " + JSON.stringify(list_package));
+
+            container = document.querySelectorAll("#field_list_U > div");
+            for(var i = 0; i < container.length; i++) {
+                container[i].remove();
+            }
+            $('#modal_packing_U').modal('hide');
+            $('#field_list_U').empty();
+
+        });
+
+        // modal pasang
+        $('#btnSimpanPkg_ABC').click(function() {
+        // Simpan packing POTONG
+            var list_packageTmp = {};
+            container = document.querySelector("#field_list_ABC");
+            matches = container.querySelectorAll("div.pck_list");
+            var cnt = 1;
+            var ls_num = 0;
+            for(var i = 0; i < matches.length; i++) {
+                el = matches[i].querySelectorAll("div.form-group > input");
+                var split_elm = el[2].value.split(",");
+                var split_key = el[7].value.split(",");
+
+                for (var v = 0; v < split_elm.length; v++) {
+                    ls_num++;
+                    list_packageTmp[ls_num] = {
+                        'detail_pesanan_detail_kain' : el[0].value,
+                        'detail_pesanan_nama_warna'  : el[1].value,
+                        'detail_pesanan_ukuran'      : split_elm[v],
+                        'detail_pesanan_sisi_kanan'  : el[3].value,
+                        'detail_pesanan_sisi_kiri'   : el[4].value,
+                        'detail_pesanan_sisi_blkng'  : el[5].value,
+                        'detail_pesanan_keterangan'  : el[6].value,
+                        'detail_pesanan_key'         : split_key[v]
+                    };
+                    latest_detail_key_JS = split_key[v];
+                }
+            }
+
+            var detail_key = latest_detail_key_JS;
+            detail_key = parseInt(detail_key);
+            var add_detail_key = detail_key + 1;
+            latest_detail_key_JS_Tmp = add_detail_key.toString().padStart(10, "0");
+            latest_detail_key_JS = latest_detail_key_JS_Tmp;
+            
+            list_package = list_packageTmp;
+            cnt++;
+            console.log(JSON.stringify(list_package));
+
+            container = document.querySelectorAll("#field_list_ABC > div");
+            for(var i = 0; i < container.length; i++) {
+                container[i].remove();
+            }
+            var option = "";
+            for (var i=1; i <= 22; i++) {
+                var sval = i;
+                if (i > 16) {
+                    if (i == 17) { sval = "XS"; }
+                    if (i == 18) { sval = "S"; }
+                    if (i == 19) { sval = "M"; }
+                    if (i == 20) { sval = "L"; }
+                    if (i == 21) { sval = "XL"; }
+                    if (i == 22) { sval = "XXL"; }
+                }
+                option += '<label style="width: 60px">'
+                            + '<div class="icheckbox_minimal-red" aria-checked="false" aria-disabled="false">'
+                                + '<input type="checkbox" class="minimal-red" name="'+sval+'" onclick="getSize2(1);">'
+                                + '<ins class="iCheck-helper"></ins>'
+                            + '</div> ' + sval
+                        + '</label>';
+            }
+
+            var reset = '<div id="potong1" class="pck_list col-md-12" style="padding: 0; display: inline-flex;">'
+                            + '<label class="col-md-1">1</label>'
+                            + '<div class="form-group col-md-6">'
+                                + '<input type="text" id="kode_kain1" class="form-control" value="">'
+                            + '</div>'
+                            + '<div class="form-group col-md-6">'
+                                + '<input type="text" id="warna_kain1" class="form-control" value="">'
+                            + '</div>'
+                            + '<div id="checked_size_kain1" class="form-group col-md-10">'
+                                + '<input type="hidden" id="size_kain1" name="size_kain1" class="form-control">'
+                                + option
+                            + '</div>'
+                            + '<div class="form-group col-md-3">'
+                                + '<input type="text" id="kanan_1" name="kanan_1" onkeyup="$(\'#kiri_1\').val(this.value);" onfocus="getSize(1); this.value=null" value="0" class="form-control">'
+                            + '</div>'
+                            + '<div class="form-group col-md-3">'
+                                + '<input type="text" id="kiri_1" name="kiri_1" value="0" class="form-control">'
+                            + '</div>'
+                            + '<div class="form-group col-md-3">'
+                                + '<input type="text" id="blkg_1" name="blkg_1" value="0" class="form-control">'
+                            + '</div>'
+                            + '<div class="form-group col-md-6">'
+                                + '<input type="text" style="width: 120px" id="ket_1" name="ket_1" class="form-control" value="">'
+                            + '</div>'
+                            + '<div class="form-group">'
+                                + '<input type="hidden" style="width: 120px" id="key_1" class="form-control" value="'+latest_detail_key_JS+'">'
+                            + '</div>'
+                        + '</div>';
+
+            $('#field_list_ABC').append(reset);
+            $('#modal_packing_ABC').modal('hide');
+            $( "#b2").unbind( "click" );
+            $( "#r2").unbind( "click" );
+
+            var nx = 1;
+            $('#b2').bind('click', function(event) {
+                
+                event.preventDefault();
+                var addto = "#field_list_ABC";
+                var add = "#potong" + nx;
+                var addRemove = "#potong" + (nx);
+                nx = nx + 1;
+                var option = "";
+                for (var i=1; i <= 22; i++) {
+                    var sval = i;
+                    if (i > 16) {
+                        if (i == 17) { sval = "XS"; }
+                        if (i == 18) { sval = "S"; }
+                        if (i == 19) { sval = "M"; }
+                        if (i == 20) { sval = "L"; }
+                        if (i == 21) { sval = "XL"; }
+                        if (i == 22) { sval = "XXL"; }
+                    }
+                    option += '<label style="width: 60px">'
+                                + '<div class="icheckbox_minimal-red" aria-checked="false" aria-disabled="false">'
+                                    + '<input type="checkbox" class="minimal-red" name="'+sval+'" onclick="getSize2('+nx+');">'
+                                    + '<ins class="iCheck-helper"></ins>'
+                                + '</div> ' + sval
+                            + '</label>';
+                }
+
+                latest_detail_key_JS = document.getElementById("key_"+ (nx-1)).value.split(",");
+                latest_detail_key_JS = latest_detail_key_JS[latest_detail_key_JS.length-1];
+                var detail_key = latest_detail_key_JS;
+                detail_key = parseInt(detail_key);
+                var add_detail_key = detail_key + 1;
+                add_detail_key = add_detail_key.toString().padStart(10, "0");
+
+                var newIn = '<div id="potong'+nx+'" class="pck_list col-md-12" style="padding: 0; display: inline-flex;">'
+                            + '<label class="col-md-1">'+nx+'</label>'
+                            + '<div class="form-group col-md-6">'
+                                + '<input type="text" id="kode_kain'+nx+'" class="form-control" value="">'
+                            + '</div>'
+                            + '<div class="form-group col-md-6">'
+                                + '<input type="text" id="warna_kain'+nx+'" class="form-control" value="">'
+                            + '</div>'
+                            + '<div id="checked_size_kain'+nx+'" class="form-group col-md-10">'
+                                + '<input type="hidden" id="size_kain'+nx+'" name="size_kain'+nx+'" class="form-control">'
+                                + option
+                            + '</div>'
+                            + '<div class="form-group col-md-3">'
+                                + '<input type="text" id="kanan_'+nx+'" name="kanan_'+nx+'" onkeyup="$(\'#kiri_'+nx+'\').val(this.value);" onfocus="getSize('+nx+'); this.value=null" value="0" class="form-control">'
+                            + '</div>'
+                            + '<div class="form-group col-md-3">'
+                                + '<input type="text" id="kiri_'+nx+'" name="kiri_'+nx+'" value="0" class="form-control">'
+                            + '</div>'
+                            + '<div class="form-group col-md-3">'
+                                + '<input type="text" id="blkg_'+nx+'" name="blkg_'+nx+'" value="0" class="form-control">'
+                            + '</div>'
+                            + '<div class="form-group col-md-6">'
+                                + '<input type="text" style="width: 120px" id="ket_'+nx+'" name="ket_'+nx+'" class="form-control" value="">'
+                            + '</div>'
+                            + '<div class="form-group">'
+                                + '<input type="hidden" style="width: 120px" id="key_'+nx+'" class="form-control" value="'+add_detail_key+'">'
+                            + '</div>'
+                        + '</div>';
+                latest_detail_key_JS = add_detail_key;
+
+                var newInput = $(newIn);
+                $(add).after(newInput);
+                if(latest_detail_key_JS_Tmp == latest_detail_key_JS) {
+                    $('#r2').attr('disabled', true);
+                } else {
+                    $('#r2').attr('disabled', false);
+                }
+
+            });
+
+            $('#r2').bind('click', function(event) {
+                var detail_key = latest_detail_key_JS;
+                detail_key = parseInt(detail_key);
+                var min_detail_key = detail_key - 1;
+                min_detail_key = min_detail_key.toString().padStart(10, "0");
+                latest_detail_key_JS = min_detail_key;
+
+                if(latest_detail_key_JS_Tmp == latest_detail_key_JS) {
+                    $('#r2').attr('disabled', true);
+                } else {
+                    $('#r2').attr('disabled', false);
+                }
+
+                if (nx != 1) {
+                    event.preventDefault();
+                    var fieldNum = nx;
+                    var fieldID = "#potong" + fieldNum;
+                    $(fieldID).remove();
+                    nx--;
+                }
+
+            });
+
+            // buat list barang
+            list_barang = tabel.rows().data();
+            delete list_barang.context;
+            delete list_barang.selector;
+            delete list_barang.ajax;
+
+            console.log("list_barang : " + JSON.stringify(list_barang));
+
+            var barang_tmp = {};
+            barang_tmp = 
+            {
+                'detail_pesanan_nama_barang'   : list_barang[counter][1],
+                'detail_pesanan_jenis_print'   : list_barang[counter][2],
+                'detail_pesanan_warna'         : list_barang[counter][3],
+                'detail_pesanan_satuan'        : list_barang[counter][4],
+                'detail_pesanan_jenis_packing' : list_barang[counter][5],
+                'packing_list'                 : list_package
+            }
+            save_barang[counter] = barang_tmp;
+            console.log("save_barang : " + JSON.stringify(save_barang));
+            counter++;
+            $('#field_list_ABC').empty();
+            // document.getElementById("btnSimpanPesanan").disabled = false;
+        });
+
+        // modal pasang
+        $('#btnSimpanPkg_D').click(function() {
+        // Simpan packing POTONG
+            var list_packageTmp = {};
+            container = document.querySelector("#field_list_D");
+            matches = container.querySelectorAll("div.pck_list");
+            var cnt = 1;
+            var ls_num = 0;
+            for(var i = 0; i < matches.length; i++) {
+                el = matches[i].querySelectorAll("div.form-group > input");
+                var split_elm = el[2].value.split(",");
+                var split_key = el[6].value.split(",");
+
+                for (var v = 0; v < split_elm.length; v++) {
+                    ls_num++;
+                    list_packageTmp[ls_num] = {
+                        'detail_pesanan_detail_kain' : el[0].value,
+                        'detail_pesanan_nama_warna'  : el[1].value,
+                        'detail_pesanan_ukuran'      : split_elm[v],
+                        'detail_pesanan_qty'         : el[3].value,
+                        'detail_pesanan_qty_packing' : el[4].value,
+                        'detail_pesanan_keterangan'  : el[5].value,
+                        'detail_pesanan_key'         : split_key[v]
+                    };
+                    latest_detail_key_JS = split_key[v];
+                }
+            }
+
+            var detail_key = latest_detail_key_JS;
+            detail_key = parseInt(detail_key);
+            var add_detail_key = detail_key + 1;
+            latest_detail_key_JS_Tmp = add_detail_key.toString().padStart(10, "0");
+            latest_detail_key_JS = latest_detail_key_JS_Tmp;
+            
+            list_package = list_packageTmp;
+            cnt++;
+            console.log(JSON.stringify(list_package));
+
+            container = document.querySelectorAll("#field_list_D > div");
+            for(var i = 0; i < container.length; i++) {
+                container[i].remove();
+            }
+            var option = "";
+            for (var i=1; i <= 22; i++) {
+                var sval = i;
+                if (i > 16) {
+                    if (i == 17) { sval = "XS"; }
+                    if (i == 18) { sval = "S"; }
+                    if (i == 19) { sval = "M"; }
+                    if (i == 20) { sval = "L"; }
+                    if (i == 21) { sval = "XL"; }
+                    if (i == 22) { sval = "XXL"; }
+                }
+                option += '<label style="width: 60px">'
+                            + '<div class="icheckbox_minimal-red" aria-checked="false" aria-disabled="false">'
+                                + '<input type="checkbox" class="minimal-red" name="'+sval+'" onclick="getSize2(1);">'
+                                + '<ins class="iCheck-helper"></ins>'
+                            + '</div> ' + sval
+                        + '</label>';
+            }
+
+            var reset = '<div id="potong_1" class="pck_list col-md-12" style="padding: 0; display: inline-flex;">'
+                            + '<label class="col-md-1">1</label>'
+                            + '<div class="form-group col-md-6">'
+                                + '<input type="text" id="kode_kain1" class="form-control" value="">'
+                            + '</div>'
+                            + '<div class="form-group col-md-6">'
+                                + '<input type="text" id="warna_kain1" class="form-control" value="">'
+                            + '</div>'
+                            + '<div id="checkeds_sizes_kain1" class="form-group col-md-10">'
+                                + '<input type="hidden" id="sizes_kain1" name="size_kain1" class="form-control">'
+                                + option
+                            + '</div>'
+                            + '<div class="form-group col-md-4">'
+                                + '<input type="text" id="qty_kain1" value="0" class="form-control">'
+                            + '</div>'
+                            + '<div class="form-group col-md-4">'
+                                + '<input type="text" id="qty_pack1" value="1" class="form-control">'
+                            + '</div>'
+                            + '<div class="form-group col-md-6">'
+                                + '<input type="text" style="width: 120px" id="ket_1" class="form-control" value="">'
+                            + '</div>'
+                            + '<div class="form-group">'
+                                + '<input type="hidden" style="width: 120px" id="keys_1" class="form-control" value="'+latest_detail_key_JS+'">'
+                            + '</div>'
+                        + '</div>';
+
+            $('#field_list_D').append(reset);
+            $('#modal_packing_D').modal('hide');
+            $( "#b3").unbind( "click" );
+            $( "#r3").unbind( "click" );
+
+            var nx = 1;
+            $('#b3').bind('click', function(event) {
+                
+                event.preventDefault();
+                var addto = "#field_list_D";
+                var add = "#potong_" + nx;
+                var addRemove = "#potong_" + (nx);
+                nx = nx + 1;
+                var option = "";
+                for (var i=1; i <= 22; i++) {
+                    var sval = i;
+                    if (i > 16) {
+                        if (i == 17) { sval = "XS"; }
+                        if (i == 18) { sval = "S"; }
+                        if (i == 19) { sval = "M"; }
+                        if (i == 20) { sval = "L"; }
+                        if (i == 21) { sval = "XL"; }
+                        if (i == 22) { sval = "XXL"; }
+                    }
+                    option += '<label style="width: 60px">'
+                                + '<div class="icheckbox_minimal-red" aria-checked="false" aria-disabled="false">'
+                                    + '<input type="checkbox" class="minimal-red" name="'+sval+'" onclick="getSize2('+nx+');">'
+                                    + '<ins class="iCheck-helper"></ins>'
+                                + '</div> ' + sval
+                            + '</label>';
+                }
+
+                latest_detail_key_JS = document.getElementById("keys_"+ (nx-1)).value.split(",");
+                latest_detail_key_JS = latest_detail_key_JS[latest_detail_key_JS.length-1];
+                var detail_key = latest_detail_key_JS;
+                detail_key = parseInt(detail_key);
+                var add_detail_key = detail_key + 1;
+                add_detail_key = add_detail_key.toString().padStart(10, "0");
+
+                var newIn = '<div id="potong_'+nx+'" class="pck_list col-md-12" style="padding: 0; display: inline-flex;">'
+                            + '<label class="col-md-1">'+nx+'</label>'
+                            + '<div class="form-group col-md-6">'
+                                + '<input type="text" id="kode_kain'+nx+'" class="form-control" value="">'
+                            + '</div>'
+                            + '<div class="form-group col-md-6">'
+                                + '<input type="text" id="warna_kain'+nx+'" class="form-control" value="">'
+                            + '</div>'
+                            + '<div id="checkeds_sizes_kain'+nx+'" class="form-group col-md-10">'
+                                + '<input type="hidden" id="sizes_kain'+nx+'" name="size_kain'+nx+'" class="form-control">'
+                                + option
+                            + '</div>'
+                            + '<div class="form-group col-md-4">'
+                                + '<input type="text" id="qty_kain'+nx+'" value="0" class="form-control">'
+                            + '</div>'
+                            + '<div class="form-group col-md-4">'
+                                + '<input type="text" id="qty_pack'+nx+'" value="0" class="form-control">'
+                            + '</div>'
+                            + '<div class="form-group col-md-6">'
+                                + '<input type="text" style="width: 120px" id="ket_'+nx+'" class="form-control" value="">'
+                            + '</div>'
+                            + '<div class="form-group">'
+                                + '<input type="hidden" style="width: 120px" id="keys_'+nx+'" class="form-control" value="'+add_detail_key+'">'
+                            + '</div>'
+                        + '</div>';
+                latest_detail_key_JS = add_detail_key;
+
+                var newInput = $(newIn);
+                $(add).after(newInput);
+                if(latest_detail_key_JS_Tmp == latest_detail_key_JS) {
+                    $('#r3').attr('disabled', true);
+                } else {
+                    $('#r3').attr('disabled', false);
+                }
+
+            });
+
+            $('#r3').bind('click', function(event) {
+                var detail_key = latest_detail_key_JS;
+                detail_key = parseInt(detail_key);
+                var min_detail_key = detail_key - 1;
+                min_detail_key = min_detail_key.toString().padStart(10, "0");
+                latest_detail_key_JS = min_detail_key;
+
+                if(latest_detail_key_JS_Tmp == latest_detail_key_JS) {
+                    $('#r3').attr('disabled', true);
+                } else {
+                    $('#r3').attr('disabled', false);
+                }
+
+                if (nx != 1) {
+                    event.preventDefault();
+                    var fieldNum = nx;
+                    var fieldID = "#potong_" + fieldNum;
+                    $(fieldID).remove();
+                    nx--;
+                }
+
+            });
+
+            // buat list barang
+            list_barang = tabel.rows().data();
+            delete list_barang.context;
+            delete list_barang.selector;
+            delete list_barang.ajax;
+
+            console.log("list_barang : " + JSON.stringify(list_barang));
+
+            var barang_tmp = {};
+            barang_tmp = 
+            {
+                'detail_pesanan_nama_barang'   : list_barang[counter][1],
+                'detail_pesanan_jenis_print'   : list_barang[counter][2],
+                'detail_pesanan_warna'         : list_barang[counter][3],
+                'detail_pesanan_satuan'        : list_barang[counter][4],
+                'detail_pesanan_jenis_packing' : list_barang[counter][5],
+                'packing_list'                 : list_package
+            }
+            save_barang[counter] = barang_tmp;
+            console.log("save_barang : " + JSON.stringify(save_barang));
+            counter++;
+            $('#field_list_D').empty();
+        });
+
+        $('#btnSimpanUbah').click(function() {
+            // buat list barang
+            counter = 0;
+            list_barang = tabel.rows().data();
+            delete list_barang.context;
+            delete list_barang.selector;
+            delete list_barang.ajax;
+            console.log("list_barang_lama : " + JSON.stringify(list_barang));
+
+            list_barang[counter][1] = document.getElementById('nama_barang').value;
+            list_barang[counter][2] = document.getElementById('jenis_print').value;
+            list_barang[counter][3] = document.getElementById('warna').value;
+
+            console.log("list_barang_baru : " + JSON.stringify(list_barang));
+
+            var barang_tmp = {};
+            barang_tmp = 
+            {
+                'detail_pesanan_nama_barang'   : list_barang[counter][1],
+                'detail_pesanan_jenis_print'   : list_barang[counter][2],
+                'detail_pesanan_warna'         : list_barang[counter][3],
+                'detail_pesanan_satuan'        : list_barang[counter][5],
+                'detail_pesanan_jenis_packing' : list_barang[counter][7],
+                'packing_list'                 : list_package
+            }
+
+            save_barang[counter] = barang_tmp;
+            console.log("save_barang : " + JSON.stringify(save_barang));
+            counter++;
+
+            $('#on_loading_modal').modal({
+                show: true,
+                keyboard: false,
+                backdrop: 'static'
+            });
+
+            var no_pesanan     = "<?php echo $nomor_pesanan; ?>";
+            var no_surat_jalan = document.getElementById('no_surat_jalan').value;
+            var no_pelanggan   = document.getElementById('no_pelanggan').value;
+
+            $.ajax({
+                type : 'POST',
+                url  : 'proses_lihat_pesanan.php',
+                dataType : 'JSON',
+                data : {
+                    'no_pesanan'     : no_pesanan,
+                    'jenis_pesanan'  : jenis_pesanan,
+                    'no_surat_jalan' : no_surat_jalan,
+                    'no_pelanggan'   : no_pelanggan,
+                    'list_barang'    : JSON.stringify(save_barang)
+                },
+                success : function(response) {
+
+                    console.log(JSON.stringify(response));
+
+                    if (response.response_code == "00") {
+                        showSuccessMessage('Pesanan berhasil di ubah.');
+                    } else {
+                        showFailedMessage(response.response_msg);
+                    }
+                },
+                failed : function() {
+                    showFailedMessage('Pesanan gagal di simpan.');
+                },
+                error : function() {
+                    showFailedMessage('Pesanan gagal di simpan.');
+                }
+            });
+
+        });
+
+    });
+
+</script>
+</body>
+</html>

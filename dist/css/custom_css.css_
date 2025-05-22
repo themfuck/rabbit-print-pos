@@ -1,0 +1,34 @@
+.pagination > .active > a {
+	background-color: #dd4b39 !important;
+	border-color: #dd4b39 !important;
+}
+img.img_modal {
+	position: absolute !important;
+}
+.modal-title {
+	font-weight: bold !important;
+}
+.success-dialog {
+	background-color: #00cc99 !important;
+	color: white !important;
+	font-weight: bold !important;
+	border-radius: 10px !important;
+	padding: 20px !important;
+	margin: 20px !important;
+}
+.failed-dialog {
+	background-color: #ff1a1a !important;
+	color: white !important;
+	font-weight: bold !important;
+	border-radius: 10px !important;
+	padding: 20px !important;
+	margin: 20px !important;
+}
+.btn-custom {
+	background-color: #fff !important;
+	border: 1px solid #ccc;
+}
+.datepicker table tr td.active.active {
+	background-color: #dd4b39 !important;
+	background-image: linear-gradient(to bottom,#e05849,#dd4b39);
+}

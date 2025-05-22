@@ -1,0 +1,84 @@
+/*.pagination > .active > a {
+	background-color: #dd4b39 !important;
+	border-color: #dd4b39 !important;
+}*/
+img.img_modal {
+	position: absolute !important;
+}
+.modal-title {
+	font-weight: bold !important;
+}
+.success-dialog {
+	background-color: #00cc99 !important;
+	color: white !important;
+	font-weight: bold !important;
+	border-radius: 10px !important;
+}
+.info-dialog {
+	background-color: #ffb900 !important;
+	color: white !important;
+	font-weight: bold !important;
+	border-radius: 10px !important;
+}
+.failed-dialog {
+	background-color: #ff1a1a !important;
+	color: white !important;
+	font-weight: bold !important;
+	border-radius: 10px !important;
+}
+#inputBarang div.form-group.col-md-3,
+#inputBarang div.form-group.col-md-2,
+#inputBarang div.form-group.col-md-4,
+#inputBarang div.form-group.col-md-1 
+{
+	padding-right: 3px !important;
+	padding-left:  3px !important;
+}
+#modal_potong div.form-group.col-md-4,
+#modal_potong div.form-group.col-md-6,
+#modal_potong div.form-group.col-md-8,
+#modal_potong div.form-group.col-md-10,
+#modal_potong div.form-group.col-md-12,
+#modal_potong label.form-group.col-md-4,
+#modal_potong label.form-group.col-md-6,
+#modal_potong label.form-group.col-md-8,
+#modal_potong label.form-group.col-md-10,
+#modal_potong label.form-group.col-md-12
+{
+	padding-right: 7px !important;
+	padding-left:  0px !important;
+}
+/*#inputBarang div.form-group label{
+	font-size: 12px !important;
+
+}*/
+div.form-group label{
+	font-size: 12px !important;
+
+}
+.btn-custom {
+	background-color: #fff !important;
+	border: 1px solid #ccc;
+}
+.datepicker table tr td.active.active,
+.datepicker table tr td.active.active:hover,
+.datepicker table tr td:hover {
+	background-color: #dd4b39 !important;
+	background-image: linear-gradient(to bottom,#e05849,#dd4b39);
+	color: #fff;
+}
+table thead tr, table tbody tr, table tfoot tr{
+	font-size: 12px !important;
+}
+table thead tr th {
+	text-align: center !important;
+}
+aside, button.btn, p {
+	font-size: 12px !important;
+}
+.selected {
+	background-color: #e6f2ff !important;
+}
+.table-hover>tbody>tr:hover {
+	background-color: #f7f7f7 !important;
+}

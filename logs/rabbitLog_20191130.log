@@ -1,0 +1,5 @@
+[2019-11-30 22:08:54] RabbitPrint.WARNING:  | | | daftar_invoice.php -> membuka halaman [] []
+[2019-11-30 22:08:54] RabbitPrint.WARNING:  | | | daftar_invoice.php -> sel_invoice : SELECT inv.*, plg.pelanggan_nama FROM invoice_keluar inv JOIN pelanggan plg ON plg.pelanggan_id = inv.invoice_keluar_pelanggan_id ORDER BY inv.invoice_keluar_id DESC [] []
+[2019-11-30 22:08:54] RabbitPrint.WARNING:  | | | data_pelanggan.php -> sel_pelanggan : SELECT p.* FROM pelanggan p JOIN invoice_keluar inv ON p.pelanggan_id = inv.invoice_keluar_pelanggan_id WHERE p.pelanggan_id > 0 GROUP BY p.pelanggan_nama; [] []
+[2019-11-30 22:08:54] RabbitPrint.WARNING:  | | | daftar_invoice.php -> jml. invoice : 0 [] []
+[2019-11-30 22:08:54] RabbitPrint.WARNING:  | | | data_pelanggan.php -> jml. pelanggan : 1 [] []

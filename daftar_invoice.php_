@@ -1,0 +1,734 @@
+<?php
+
+/*
+ * Masukkan setiap perubahan yang dilakukan di tabel ini.
+ *
+ * NAMA                VERSI       TGL(DD-MM-YYYY)        PERUBAHAN
+ * ========================================================================================================
+ * VANDI                1.0         18-09-2018            Pembuatan awal (create)
+ *
+ */
+
+include_once("head.php");
+include_once("konfigurasi.php");
+
+tulisLog('daftar_invoice.php -> membuka halaman');
+
+$user_id = $_SESSION['user_id'];
+$user_nama = $_SESSION['user_nama'];
+
+$sel_invoice = "SELECT inv.*, plg.pelanggan_nama FROM invoice_keluar inv JOIN pelanggan plg ON plg.pelanggan_id = inv.invoice_keluar_pelanggan_id ORDER BY inv.invoice_keluar_id DESC";
+
+tulisLog('daftar_invoice.php -> sel_invoice : ' . $sel_invoice);
+
+$query_inv = $con->query($sel_invoice);
+
+$sel_pelanggan = "SELECT p.* FROM pelanggan p"
+                . " JOIN invoice_keluar inv ON p.pelanggan_id = inv.invoice_keluar_pelanggan_id"
+                . " WHERE p.pelanggan_id > 0"
+                . " GROUP BY p.pelanggan_nama;";
+
+tulisLog('data_pelanggan.php -> sel_pelanggan : ' . $sel_pelanggan);
+
+$query_plg = $con->query($sel_pelanggan);
+?>
+<style>
+input.invalid {
+  background-color: #ffdddd;
+}
+
+.tab {
+  display: none;
+}
+
+.step {
+  height: 15px;
+  width: 15px;
+  margin: 0 2px;
+  background-color: #bbbbbb;
+  border: none;
+  border-radius: 50%;
+  display: inline-block;
+  opacity: 0.5;
+}
+
+.step.active {
+  opacity: 1;
+}
+
+.step.finish {
+  background-color: #4CAF50;
+}
+.val1, .val2 {
+  width: 90px;
+}
+
+</style>
+<body class="hold-transition skin-blue-light sidebar-collapse sidebar-mini">
+  <div class="wrapper">
+
+    <header class="main-header">
+      <?php include_once("logo-header.php"); ?>
+    </header>
+
+      <aside class="main-sidebar">
+          <?php include_once("menu.php"); ?>
+      </aside>
+
+    <div class="content-wrapper">
+      <section class="content-header">
+            <h1>
+              Invoice
+            </h1>
+        </section>
+      <section class="content">
+        <div class="box box-primary">
+          <div class="box-header">
+            <h3 class="box-title">Daftar Invoice</h3>
+          </div>
+
+          <div class="box-body">
+            <button type="button" class="btn btn-primary" onclick="window.location='tambah_invoice.php'">Tambah Invoice</button>
+            <button type="button" class="btn btn-primary" data-target="#modal-invoice-plg" data-toggle="modal">Buat Invoice Pelanggan</button>
+            <button type="button" class="btn btn-primary" data-target="#modal-rekap-invoice" data-toggle="modal">Buat Rekap Invoice</button>
+            <table id="tbl_invoice" class="table table-bordered table-hover">
+              <thead>
+                <tr>
+                  <th>No</th>
+                  <th>ID</th>
+                  <th>No. Invoice</th>
+                  <th>Nama Pelanggan</th>
+                  <th>Tanggal Kirim</th>
+                  <th>Total Harga</th>
+                  <th>Menu</th>
+                </tr>
+              </thead>
+              <tbody>
+                <?php
+                if ($query_inv->num_rows > 0) {
+
+                  tulisLog('daftar_invoice.php -> jml. invoice : ' . count($rs));
+
+                  $num = 0;
+                  while ($row = $query_inv->fetch_assoc()) {
+                    $num++;
+                    echo ""
+                    . "<tr>"
+                      . "<td>" . $num . "</td>"
+                      . "<td>" . $row['invoice_keluar_id'] . "</td>"
+                      . "<td>" . $row['invoice_keluar_no_invoice'] . "</td>"
+                      . "<td>" . $row['pelanggan_nama'] . "</td>"
+                      . "<td>" . $row['invoice_keluar_tanggal_kirim'] . "</td>"
+                      . "<td>" . number_format($row['invoice_keluar_total_harga']) . "</td>"
+                      . "<td></td>"
+                    . "</tr>";
+                  }
+                }
+                ?>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </div>
+
+  </div>
+
+  <div class="modal fade" id="modal-pilih-plg">
+    <div class="modal-dialog modal-md" >
+      <div class="modal-content">
+          <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span></button>
+            <h4 class="modal-title">Pilih Pelanggan</h4>
+          </div>
+          <div class="box-body" style="padding: 15px">
+            <table id="tbl_pilihplg" class="table table-bordered table-hover">
+              <thead>
+                 <tr>
+                    <th>No</th>
+                    <th>ID</th>
+                    <th>Nama</th>
+                    <th>Telepon</th>
+                    <th>Alamat</th>
+                 </tr>
+              </thead>
+              <tbody>
+              <?php
+              if ($query_plg->num_rows > 0) {
+                    tulisLog('data_pelanggan.php -> jml. pelanggan : ' . count($query_plg));
+                    $num = 0;
+                    while ($row = $query_plg->fetch_assoc()) {
+                          $num++;
+                          echo ""
+                          . "<tr>"
+                                . "<td>" . $num . "</td>"
+                                . "<td>" . $row['pelanggan_id'] . "</td>"
+                                . "<td>" . $row['pelanggan_nama'] . "</td>"
+                                . "<td>" . $row['pelanggan_telp'] . "</td>"
+                                . "<td>" . $row['pelanggan_alamat'] . "</td>"
+                          . "</tr>";
+                    }
+              }
+              ?>
+              </tbody>
+            </table>
+          </div>
+          <div class="modal-footer">
+              <button type="button" class="btn btn-danger" data-dismiss="modal" aria-label="Close">Tutup</button>
+          </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="modal-rekap-invoice">
+    <div class="modal-dialog modal-md" >
+      <div class="modal-content">
+          <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span></button>
+            <h4 class="modal-title">Buat Rekap Invoice</h4>
+          </div>
+          <div class="box-body" style="padding: 15px">
+            <div style="display: inline-flex;">
+              <div class="form-group" style="margin-right: 20px">
+                  <label for="tgl_pesanan">Tanggal Awal</label>
+                  <div class="input-group date">
+                      <input type="text" class="form-control pull-right" id="tgl_awal" placeholder="Tanggal Awal">
+                      <div class="input-group-addon">
+                          <i class="fa fa-calendar"></i>
+                      </div>
+                  </div>
+              </div>
+              <div class="form-group">
+                  <label for="tgl_pesanan">Tanggal Akhir</label>
+                  <div class="input-group date">
+                      <input type="text" class="form-control pull-right" id="tgl_akhir" placeholder="Tanggal Akhir">
+                      <div class="input-group-addon">
+                          <i class="fa fa-calendar"></i>
+                      </div>
+                  </div>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+              <button type="button" class="btn btn-danger" data-dismiss="modal" aria-label="Close">Tutup</button>
+              <button id="btnPrintRekap" class="btn btn-primary">Cetak <i class="fa fa-print"></i></button>
+          </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="modal-invoice-plg">
+    <div class="modal-dialog modal-md" >
+      <div class="modal-content">
+          <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span></button>
+            <h4 class="modal-title">Buat Invoice Pelanggan</h4>
+          </div>
+          <div class="box-body" style="padding: 15px">
+            <div style="display: inline-flex;">
+              <div class="form-group" style="margin-right: 20px">
+                  <label for="tgl_pesanan">Tanggal Awal</label>
+                  <div class="input-group date">
+                      <input type="text" class="form-control pull-right" id="inv_tgl_awal" placeholder="Tanggal Awal">
+                      <div class="input-group-addon">
+                          <i class="fa fa-calendar"></i>
+                      </div>
+                  </div>
+              </div>
+              <div class="form-group">
+                  <label for="tgl_pesanan">Tanggal Akhir</label>
+                  <div class="input-group date">
+                      <input type="text" class="form-control pull-right" id="inv_tgl_akhir" placeholder="Tanggal Akhir">
+                      <div class="input-group-addon">
+                          <i class="fa fa-calendar"></i>
+                      </div>
+                  </div>
+              </div>
+            </div>
+            <div>
+              <div class="form-group" style="margin-right: 20px">
+                  <label for="tgl_pesanan">Pelanggan</label>
+                  <div class="input-group" style="width: 300px" >
+                      <input type="hidden" id="inv_id_pelanggan">
+                      <input type="text" class="form-control pull-right" id="inv_nama_pelanggan" placeholder="Pilih Pelanggan">
+                      <div class="input-group-addon" onclick="toggleModalPlg()">
+                          <span>Pilih</span>
+                      </div>
+                  </div>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+              <button type="button" class="btn btn-danger" data-dismiss="modal" aria-label="Close">Tutup</button>
+              <button id="btnPrintInvoice" class="btn btn-primary">Cetak <i class="fa fa-print"></i></button>
+          </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="modal-ubah-invoice">
+    <div class="modal-dialog modal-lg" >
+      <div class="modal-content">
+          <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span></button>
+            <h4 class="modal-title">Ubah Harga Invoice</h4>
+          </div>
+          <div class="box-body" style="padding: 15px">
+            <div>
+              <div class="col-md-12" style="padding-left: 0">
+                 <p class="col-md-2" style="padding-left: 0"><strong>No. Invoice</strong></p>
+                 <p class="col-md-8" id="u_noInvoice"></p>
+              </div>
+              <div class="col-md-12" style="padding-left: 0">
+                 <p class="col-md-2" style="padding-left: 0"><strong>Nama Pelanggan</strong></p>
+                 <p class="col-md-8" id="u_namaPelanggan"></p>
+              </div>
+              <div class="col-md-12" style="padding-left: 0">
+                 <p class="col-md-2" style="padding-left: 0"><strong>Tanggal Kirim</strong></p>
+                 <p class="col-md-8" id="u_tglKirim"></p>
+              </div>
+              <div class="col-md-12" style="padding-left: 0">
+                 <p class="col-md-2" style="padding-left: 0"><strong>Total Harga</strong></p>
+                 <p class="col-md-8" id="u_totalHarga"></p>
+              </div>
+            </div>
+            <!-- tabel detail invoice -->
+            <table id="tbl_detail_inv" class="table table-bordered table-hover">
+              <thead>
+                <tr>
+                  <th>No</th>
+                  <th style='display: none'>ID</th>
+                  <th style='display: none'>No. Invoice</th>
+                  <th>No. Surat Jalan</th>
+                  <th>Jenis Print</th>
+                  <th>Total Barang</th>
+                  <th>Satuan</th>
+                  <th>Harga</th>
+                  <th>Subtotal</th>
+                </tr>
+              </thead>
+              <tbody>
+              </tbody>
+            </table>
+          </div>
+          <div class="modal-footer">
+            <button id="btnSimpanInvoice" type="button" class="btn btn-danger">Simpan</button>
+            <button type="button" class="btn btn-danger" data-dismiss="modal" aria-label="Close">Tutup</button>
+          </div>
+      </div>
+    </div>
+  </div>
+
+<?php include_once("footer.php"); ?>
+<script>
+
+    $(document).ready(function() {
+        // document.getElementById("p_namaUser").innerText = "<?php echo $user_nama; ?>";
+
+        setSidebarToActive();
+
+        $('#tgl_awal').datepicker({
+            'setDate'     : new Date(),
+            'format'      : "dd-mm-yyyy",
+            'autoclose'   : true
+        });
+
+        $('#tgl_akhir').datepicker({
+            'setDate'     : new Date(),
+            'format'      : "dd-mm-yyyy",
+            'autoclose'   : true
+        });
+
+        $('#inv_tgl_awal').datepicker({
+            'setDate'     : new Date(),
+            'format'      : "dd-mm-yyyy",
+            'autoclose'   : true
+        });
+
+        $('#inv_tgl_akhir').datepicker({
+            'setDate'     : new Date(),
+            'format'      : "dd-mm-yyyy",
+            'autoclose'   : true
+        });
+
+    });
+
+    function toggleModalPlg() {
+      $('#modal-pilih-plg').modal('show');
+      $('#modal-invoice-plg').modal('hide');
+    }
+
+    // $(function () {
+      var tbl_invoice = $('#tbl_invoice').DataTable({
+        'paging'      : true,
+        'lengthChange': false,
+        'searching'   : true,
+        'ordering'    : true,
+        'info'        : false,
+        'autoWidth'   : true,
+        'language' : {
+          'search'           : '<i class="fa fa-search"></i>',
+          'searchPlaceholder': 'Pencarian',
+          'paginate' : {
+              'previous' : '<i class="fa fa-angle-left"></i>',
+              'next'     : '<i class="fa fa-angle-right"></i>'
+          },
+          'emptyTable'   : 'Tidak ada data untuk ditampilkan.'
+        },
+        'columnDefs' : [
+          { "visible": false, "targets": 1 },
+          {
+            'targets' : -1,
+            'data'    : null,
+            'defaultContent' :
+              '<button style="margin-left: 3px" class="btn btn-custom btnEdit">Ubah Harga <i class="fa fa-edit"></i></button>'
+          }
+        ]
+      });
+
+      var tbl_detail_inv = $('#tbl_detail_inv').DataTable({
+        'paging'      : false,
+        'lengthChange': false,
+        'searching'   : false,
+        'ordering'    : false,
+        'info'        : false,
+        'autoWidth'   : true,
+        'language' : {
+          'search'           : '<i class="fa fa-search"></i>',
+          'searchPlaceholder': 'Pencarian',
+          'paginate' : {
+              'previous' : '<i class="fa fa-angle-left"></i>',
+              'next'     : '<i class="fa fa-angle-right"></i>'
+          },
+          'emptyTable'   : 'Tidak ada data untuk ditampilkan.'
+        }
+      });
+
+      var tabel_psn = $('#tbl_pesanan').DataTable({
+          'paging'      : false,
+          'lengthChange': false,
+          'searching'   : false,
+          'ordering'    : false,
+          'info'        : false,
+          'autoWidth'   : false,
+          'language' : {
+            'search'           : '<i class="fa fa-search"></i>',
+            'searchPlaceholder': 'Pencarian',
+            'paginate' : {
+                'previous' : '<i class="fa fa-angle-left"></i>',
+                'next'     : '<i class="fa fa-angle-right"></i>'
+            },
+            'emptyTable'   : 'Tidak ada data untuk ditampilkan.'
+          },
+          'columnDefs' : [
+            { "visible": false, "targets": 1 }, // id surja
+            { "visible": false, "targets": 4 }, // id pelanggan
+            { "visible": false, "targets": 6 }, // no pesanan
+            { "visible": false, "targets": 8 }  // status
+          ]
+      });
+
+      var table = $('#tbl_pilihplg').DataTable({
+          'select'      : true,
+          'paging'      : true,
+          'lengthChange': false,
+          'searching'   : true,
+          'ordering'    : true,
+          'info'        : false,
+          'autoWidth'   : false,
+          'pageLength'  : 8,
+          'language' : {
+              'search'           : '<i class="fa fa-search"></i>',
+              'searchPlaceholder': 'Pencarian',
+              'paginate' : {
+                  'previous' : '<i class="fa fa-angle-left"></i>',
+                  'next'     : '<i class="fa fa-angle-right"></i>'
+              },
+              'emptyTable'   : 'Tidak ada data untuk ditampilkan.'
+          },
+          'columnDefs' : [
+            { "visible": false, "targets": 1 }
+          ]
+      });
+
+      $('#tbl_invoice tbody').on('click', 'button', function () {
+
+        var data = tbl_invoice.row($(this).parents('tr')).data();
+        var pelanggan_id = data[1];
+        var btnType = tbl_invoice.row($(this).parents('tr')).selector.rows.prevObject["0"].classList[2];
+
+        var data_detail = tbl_detail_inv.rows().data();
+
+        if (btnType == "btnEdit") {
+
+            $('#on_loading_modal').modal();
+
+            document.getElementById('u_noInvoice').innerText = data[2];
+            document.getElementById('u_namaPelanggan').innerText = data[3];
+            document.getElementById('u_tglKirim').innerText = data[4];
+            document.getElementById('u_totalHarga').innerText = data[5];
+
+            $.ajax({
+                type: "POST",
+                dataType: "JSON",
+                url: "proses_daftar_invoice.php",
+                data: {
+                  jenis_proses  : "get_detailinv",
+                  nomor_invoice : data[2]
+                },
+                success: function(response) {
+
+                  console.log(response);
+
+                  var list_detailinv = response.daftar_detail;
+
+                  var body = "";
+
+                  for (var i = 0; i < list_detailinv.length; i++) {
+                    var cnt = i + 1;
+                    body += "<tr class='txtMult'>"
+                        + "<td>" + cnt + "</td>"
+                        + "<td style='display: none'>"
+                          + "<input id='e_invoice_keluar_detail_id' style='border:0; width: 30px' value='" + list_detailinv[i]['invoice_keluar_detail_id'] + "' readonly />"
+                        + "</td>"
+                        + "<td style='display: none'>"
+                          + "<input id='e_invoice_keluar_detail_no_invoice' style='border:0' value='" + list_detailinv[i]['invoice_keluar_detail_no_invoice'] + "' readonly />"
+                        + "</td>"
+                        + "<td>"
+                          + "<input id='e_invoice_keluar_detail_surat_jalan_nomor' style='border:0'  value='"+ list_detailinv[i]['invoice_keluar_detail_surat_jalan_nomor'] +"' readonly />"
+                        + "</td>"
+                        + "<td>"
+                          + "<input id='e_invoice_keluar_detail_jenis_print' style='border:0'  value='"+ list_detailinv[i]['invoice_keluar_detail_jenis_print'] +"' readonly />"
+                        + "</td>"
+                        + "<td>"
+                          + "<input id='e_invoice_keluar_detail_total_barang' class='val1' style='border:0' value='" + list_detailinv[i]['invoice_keluar_detail_total_barang'] + "' readonly />"
+                        + "</td>"
+                        + "<td>"
+                          + "<input id='e_invoice_keluar_detail_satuan' class='val1' style='border:0; width: 30px' value='" + list_detailinv[i]['invoice_keluar_detail_satuan'] + "' readonly />"
+                        + "</td>"
+                        + "<td>Rp. "
+                          + "<input id='e_invoice_keluar_detail_harga' class='val2' value='" + parseInt( list_detailinv[i]['invoice_keluar_detail_harga'] ).toLocaleString() + "' />"
+                        + "</td>"
+                        + "<td>Rp."
+                          + "<input class='multTotal' id='e_invoice_keluar_detail_subtotal_harga' style='border:0' value='" + parseInt( list_detailinv[i]['invoice_keluar_detail_subtotal_harga'] ).toLocaleString() + "' readonly />"
+                        + "</td>"
+                      + "</tr>";
+
+                  }
+                  body += "";
+
+                  $("#tbl_detail_inv").find('tbody').empty();
+
+                  $('#tbl_detail_inv tbody').append(body);
+
+                  $('#on_loading_modal').modal('hide');
+
+                  $('#modal-ubah-invoice').modal({
+                      show: true,
+                      keyboard: false,
+                      backdrop: 'static'
+                  });
+
+                },
+                error: function(msg){
+                    alert("Error: "+ JSON.stringify(msg));
+                }
+            });
+
+        }
+
+      });
+
+      $('#btnSimpanInvoice').bind('click', function(event) {
+          simpanupdtInvoice(document.getElementById('u_noInvoice').innerText);
+          $( this ).unbind( event );
+      });
+
+      $('#tbl_detail_inv tbody').on('keyup', 'tr', function () {
+
+          var mult = 0;
+          $("tr.txtMult").each(function() {
+              var $val1 = $('.val1', this).val();
+              var $val2 = $('.val2', this).val();
+              $val2 = $val2.replace(",", "");
+
+              var $total = ($val1 * 1) * ($val2 * 1)
+              // $('.multTotal', this).val($total);
+              $('.multTotal', this).val(parseInt( $total ).toLocaleString());
+              mult += $total;
+          });
+
+          $("#u_totalHarga").text("Rp. " + parseInt( mult ).toLocaleString());
+
+      });
+
+      $('#tbl_pilihplg tbody').on( 'click', 'tr', function () {
+        if ( $(this).hasClass('selected') ) {
+            $(this).removeClass('selected');
+        }
+        else
+        {
+            table.$('tr.selected').removeClass('selected');
+            $(this).addClass('selected');
+            var dt = table.row(this).data();
+            $('#inv_nama_pelanggan').val(dt[2]);
+            $('#inv_id_pelanggan').val(dt[1]);
+
+            $('#modal-pilih-plg').modal('hide');
+            $('#modal-invoice-plg').modal('show');
+        }
+      });
+
+    // fungsi cetak rekap invoice
+    $('#btnPrintRekap').on('click', function() {
+
+        var tgl_awal  = document.getElementById('tgl_awal').value;
+        var tgl_akhir = document.getElementById('tgl_akhir').value;
+
+        window.location = "cetak_invoice.php?tgl_awal="+tgl_awal+"&tgl_akhir="+tgl_akhir+"";
+
+    });
+
+    $('#btnPrintInvoice').on('click', function() {
+
+        var tgl_awal  = document.getElementById('inv_tgl_awal').value;
+        var tgl_akhir = document.getElementById('inv_tgl_akhir').value;
+        var id_plg = document.getElementById('inv_id_pelanggan').value;
+
+        window.location = "cetak_invoice_pelanggan.php?tgl_awal="+tgl_awal+"&tgl_akhir="+tgl_akhir+"&id_pelanggan="+id_plg;
+
+    });
+
+    // fungsi untuk multi-step
+    var currentTab = 0;
+    // showTab(currentTab);
+
+    function showTab(n) {
+      var x = document.getElementsByClassName("tab");
+      x[n].style.display = "block";
+      if (n == 0) {
+        document.getElementById("prevBtn").style.display = "none";
+      } else {
+        document.getElementById("prevBtn").style.display = "inline";
+      }
+      fixStepIndicator(n)
+    }
+
+    function simpanInvoice() {
+
+        $('#modal-tambah-invoice').modal('hide');
+
+        $('#on_loading_modal').modal({
+                show: true,
+                keyboard: false,
+                backdrop: 'static'
+        });
+
+        var id = document.getElementById('id_pelanggan').value;
+        var no_sj = document.getElementById('nomor_suratjalan').value;
+
+        $.ajax({
+          type: "POST",
+          dataType: "JSON",
+          url: "proses_daftar_invoice.php",
+          data: {
+            jenis_proses      : "buat_invoice",
+            id_pelanggan      : id,
+            surat_jalan_nomor : no_sj
+          },
+          success: function(response) {
+            if (response.response_code == "00") {
+                showSuccessMessage(response.response_msg);
+            } else {
+                showFailedMessage(response.response_msg);
+            }
+          },
+          failed : function() {
+              showFailedMessage('Simpan Invoice Gagal.');
+          },
+          error : function() {
+              showFailedMessage('Simpan Invoice Gagal.');
+          }
+        });
+
+    }
+
+    function nextPrev(n) {
+      var x = document.getElementsByClassName("tab");
+      x[currentTab].style.display = "none";
+      currentTab = currentTab + n;
+      if (currentTab >= x.length) {
+        document.getElementById("regForm").submit();
+        return false;
+      }
+      showTab(currentTab);
+    }
+
+    function fixStepIndicator(n) {
+      var i, x = document.getElementsByClassName("step");
+      for (i = 0; i < x.length; i++) {
+        x[i].className = x[i].className.replace(" active", "");
+      }
+      x[n].className += " active";
+    }
+
+    function simpanupdtInvoice(no_invoice) {
+
+  		$('#modal-ubah-invoice').modal('hide');
+
+  		$('#on_loading_modal').modal({
+          show: true,
+          keyboard: false,
+          backdrop: 'static'
+      });
+
+      var barang_tmp = new Array();
+      document.querySelectorAll('#tbl_detail_inv tbody tr').forEach(function(row) {
+        barang_tmp.push({
+          'invoice_keluar_detail_id' : row.querySelector('td input[id="e_invoice_keluar_detail_id"]').value,
+          'invoice_keluar_detail_no_invoice' : row.querySelector('td input[id="e_invoice_keluar_detail_no_invoice"]').value,
+          'invoice_keluar_detail_surat_jalan_nomor' : row.querySelector('td input[id="e_invoice_keluar_detail_surat_jalan_nomor"]').value,
+          'invoice_keluar_detail_jenis_print' : row.querySelector('td input[id="e_invoice_keluar_detail_jenis_print"]').value,
+          'invoice_keluar_detail_total_barang' : row.querySelector('td input[id="e_invoice_keluar_detail_total_barang"]').value,
+          'invoice_keluar_detail_satuan' : row.querySelector('td input[id="e_invoice_keluar_detail_satuan"]').value,
+          'invoice_keluar_detail_harga' : row.querySelector('td input[id="e_invoice_keluar_detail_harga"]').value,
+          'invoice_keluar_detail_subtotal_harga' : row.querySelector('td input[id="e_invoice_keluar_detail_subtotal_harga"]').value
+        });
+      });
+
+      console.log("data : " + JSON.stringify(barang_tmp));
+
+  		$.ajax({
+    			type: "POST",
+    			dataType: "JSON",
+    			url: "proses_daftar_invoice.php",
+    			data: {
+    				jenis_proses               : "update_invoice",
+    				invoice_keluar_no_invoice  : no_invoice,
+            invoice_keluar_total_harga : document.getElementById("u_totalHarga").innerText.replace("Rp. ", ""),
+    				list_detailinv             : JSON.stringify(barang_tmp)
+    			},
+    			success: function(response) {
+      				if (response.response_code == "00") {
+                  showSuccessMessage(response.response_msg);
+              } else {
+                  showFailedMessage(response.response_msg);
+              }
+    			},
+          failed : function() {
+              showFailedMessage('Update Invoice Gagal.');
+          },
+          error : function() {
+              showFailedMessage('Update Invoice Gagal.');
+          }
+  		});
+
+  	}
+
+</script>
+</body>
+</html>
